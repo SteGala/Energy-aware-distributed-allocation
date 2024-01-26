@@ -77,7 +77,7 @@ def _add_job(job_list, job_dict, describe_dict=None):
 
 
     # Add entries to be used in scheduling
-    job_dict['duration'] = int(float(job_dict['duration']))
+    job_dict['duration'] = 40
     if job_dict['duration'] == 0:
         job_dict['duration'] = 1  # fix duration == 0 problem.
     job_dict['size'] = int((job_dict['num_gpu'] + job_dict['num_cpu']) * job_dict['duration']) # (gpu + cpu) x duration
@@ -137,10 +137,10 @@ def add_job(csv_file, describe_dict, limit=None):
 # function from Alibaba's trace
 def init_go(num_jobs=100):
         cur_time = 0
-        arrivals = 10
+        arrivals = 1
         job_list = add_job(dataset, None, limit=num_jobs)
         if (num_jobs is not None) and num_jobs <= len(job_list):
-            random.shuffle(job_list)
+            #random.shuffle(job_list)
 
             job_list = job_list[:num_jobs]
         job_list = set_job_list_arrival_time(job_list, arrivals)

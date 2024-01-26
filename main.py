@@ -1,13 +1,14 @@
 from src.simulator import Simulator_Plebiscito
 from src.config import Utility, DebugLevel, SchedulingAlgorithm, ApplicationGraphType
 from src.dataset_builder import generate_dataset
+from tst.brute_force_scheduler import BruteForceScheduler
 
 if __name__ == '__main__':
     n_jobs = 50
     dataset = generate_dataset(entries_num=n_jobs)
     
     simulator = Simulator_Plebiscito(filename="prova",
-                          n_nodes=50,
+                          n_nodes=10,
                           node_bw=1000000000,
                           n_jobs=n_jobs,
                           n_client=3,
@@ -23,3 +24,10 @@ if __name__ == '__main__':
                           split=True,
                           app_type=ApplicationGraphType.LINEAR,)
     simulator.run()
+    
+    nodes = simulator.get_nodes()
+    
+    simulator_brute_force = BruteForceScheduler(nodes, dataset, "prova2", ApplicationGraphType.LINEAR, True)
+    
+    simulator_brute_force.run()
+    

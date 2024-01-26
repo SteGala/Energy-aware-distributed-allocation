@@ -11,7 +11,6 @@ class Utility(Enum):
     SGF = 7
     UTIL = 8
     
-    
 class DebugLevel(Enum):
     TRACE = 5
     DEBUG = logging.DEBUG
@@ -75,7 +74,7 @@ class GPUSupport:
         Returns:
             bool: True if `gpu_type1` can host `gpu_type2`, False otherwise.
         """
-        return gpu_type1.value == gpu_type2.value
+        return True
         # if gpu_type2.value == GPUType.V100.value:
         #     if gpu_type1.value == GPUType.V100.value:
         #         return True
