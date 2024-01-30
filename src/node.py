@@ -4,7 +4,7 @@ This module impelments the behavior of a node
 
 from queue import Empty
 import time
-from src.config import Utility, GPUType, GPUSupport
+from src.config import Utility, NodeType, NodeSupport
 from src.network_topology import NetworkTopology
 from src.node_performance import NodePerformance
 from datetime import datetime, timedelta
@@ -12,7 +12,6 @@ import copy
 import logging
 import math 
 import threading
-from threading import Event
 import math
 from src.topology import topo as LogicalTopology
 
@@ -24,7 +23,7 @@ class InternalError(Exception):
 
 class node:
 
-    def __init__(self, id, network_topology: NetworkTopology, gpu_type: GPUType, utility: Utility, alpha: float, enable_logging: bool, logical_topology: LogicalTopology, tot_nodes: int, progress_flag: bool, use_net_topology=False, decrement_factor=0.1):
+    def __init__(self, id, network_topology: NetworkTopology, gpu_type: NodeType, utility: Utility, alpha: float, enable_logging: bool, logical_topology: LogicalTopology, tot_nodes: int, progress_flag: bool, use_net_topology=False, decrement_factor=0.1):
         self.id = id    # unique edge node id
         self.gpu_type = gpu_type
         self.utility = utility
@@ -35,10 +34,10 @@ class node:
         self.progress_flag = progress_flag
         self.decrement_factor = decrement_factor
         
-        self.initial_cpu, self.initial_gpu = GPUSupport.get_compute_resources(gpu_type)
+        self.initial_cpu, self.initial_gpu = NodeSupport.get_compute_resources(gpu_type)
         self.updated_gpu = self.initial_gpu
         self.updated_cpu = self.initial_cpu
-        self.performance = NodePerformance(self.initial_cpu, self.initial_gpu, self.id)
+        self.performance = NodePerformance(self.initial_cpu, self.initial_gpu, gpu_type, self.id)
 
         self.available_cpu_per_task = {}
         self.available_gpu_per_task = {}
@@ -171,7 +170,7 @@ class node:
         return util_rate
 
 
-    def utility_function(self, avail_bw, avail_cpu, avail_gpu):
+    def utility_function(self, avail_bw, avail_cpu, avail_gpu, bw_job=0, cpu_job=0, gpu_job=0):
         def f(x, alpha, beta):
             if beta == 0 and x == 0:
                 return 1
@@ -211,16 +210,18 @@ class node:
         elif self.utility == Utility.ALPHA_GPU_BW:
             return (self.alpha*(avail_gpu/self.initial_gpu))+((1-self.alpha)*(avail_bw/self.initial_bw)) # GPU vs BW
         elif self.utility == Utility.LGF:
-            corrective_factor = GPUSupport.get_GPU_corrective_factor(self.gpu_type, GPUSupport.get_gpu_type(self.item['gpu_type']), decrement=self.decrement_factor)
-            return avail_gpu * corrective_factor
+            corrective_factor = NodeSupport.get_GPU_corrective_factor(self.gpu_type, NodeSupport.get_node_type(self.item['gpu_type']), decrement=self.decrement_factor)
+            return avail_cpu * corrective_factor
         elif self.utility == Utility.SGF:
-            corrective_factor = GPUSupport.get_GPU_corrective_factor(self.gpu_type, GPUSupport.get_gpu_type(self.item['gpu_type']), decrement=self.decrement_factor)
+            corrective_factor = NodeSupport.get_GPU_corrective_factor(self.gpu_type, NodeSupport.get_node_type(self.item['gpu_type']), decrement=self.decrement_factor)
             return (self.initial_gpu - avail_gpu) * corrective_factor
         elif self.utility == Utility.UTIL:
             return self.util_rate()
 
         elif self.utility == Utility.POWER:
-            pass # we need to define here the utility function
+            p_before = self.performance.compute_current_power_consumption_cpu(self.initial_cpu - avail_cpu)
+            p_after = self.performance.compute_current_power_consumption_cpu(self.initial_cpu - (avail_cpu - cpu_job))
+            return 1/(p_after - p_before)
 
 
     def forward_to_neighbohors(self, custom_dict=None, resend_bid=False):
@@ -333,14 +334,14 @@ class node:
         return gpu
 
     def bid_new(self, enable_forward=True):  
-        job_GPU_type = GPUSupport.get_gpu_type(self.item['gpu_type'])
+        job_GPU_type = NodeSupport.get_node_type(self.item['gpu_type'])
+        #print(self.layer_bid_already)
         # compute the requirements in CPU for the job
-        cpu = sum(self.item['NN_cpu'])
         
         # check if node GPU is capable of hosting the job
         # check if the node has enough resources to host the job, we assume that a node can bet only in if it has enough resources to host the entire job
-        if not GPUSupport.can_host(self.gpu_type, job_GPU_type) \
-            or (self.item['job_id'] in self.layer_bid_already and True not in self.layer_bid_already[self.item['job_id']] and self.updated_cpu < cpu*(2/3)):
+        if not NodeSupport.can_host(self.gpu_type, job_GPU_type):# \
+            #or (self.item['job_id'] in self.layer_bid_already and True not in self.layer_bid_already[self.item['job_id']]):
             self.forward_to_neighbohors()
             return False
               
@@ -355,7 +356,7 @@ class node:
             for i in range(len(self.layer_bid_already[self.item['job_id']])):
                 # include only those layers that have not been bid on yet and that can be executed on the node (i.e., the node has enough resources)
                 if not self.layer_bid_already[self.item['job_id']][i] \
-                    and self.item['NN_gpu'][i] <= self.updated_gpu:# \
+                    and self.item['NN_cpu'][i] <= self.updated_cpu:# \
                         #self.item['NN_cpu'][i] <= self.updated_cpu:# and self.item['NN_data_size'][i] <= self.updated_bw:
                     possible_layer.append(i)
         else:
@@ -377,7 +378,7 @@ class node:
                     best_placement = l
             
             # compute the bid for the current layer, and remove it from the list of possible layers (no matter if the bid is valid or not)
-            bid = self.utility_function(self.updated_bw, self.updated_cpu, self.updated_gpu)
+            bid = self.utility_function(self.updated_bw, self.updated_cpu, self.updated_gpu, self.item["NN_data_size"][best_placement], self.item["NN_cpu"][best_placement], self.item["NN_gpu"][best_placement])
             bid -= self.id * 0.000000001
             self.layer_bid_already[self.item['job_id']][best_placement] = True    
             possible_layer.remove(best_placement)       
@@ -415,12 +416,12 @@ class node:
                     right_score = None
                     
                     if left_bound >= 0 and self.layer_bid_already[self.item['job_id']][left_bound] == False \
-                        and self.item['NN_gpu'][left_bound] <= self.updated_gpu - gpu_ :#\
+                        and self.item['NN_cpu'][left_bound] <= self.updated_cpu - cpu_ :#\
                             #and self.item['NN_cpu'][left_bound] <= self.updated_cpu - cpu_ :
                         left_score = self.compute_layer_score(self.item["NN_cpu"][left_bound], self.item["NN_gpu"][left_bound], self.item["NN_data_size"][left_bound])
                         
                     if right_bound < len(self.item["NN_cpu"]) and self.layer_bid_already[self.item['job_id']][right_bound] == False \
-                        and self.item['NN_gpu'][right_bound] <= self.updated_gpu - gpu_:# \
+                        and self.item['NN_cpu'][right_bound] <= self.updated_cpu - cpu_:# \
                             #and self.item['NN_cpu'][right_bound] <= self.updated_cpu - cpu_ \
                                 
                         right_score = self.compute_layer_score(self.item["NN_cpu"][right_bound], self.item["NN_gpu"][right_bound], self.item["NN_data_size"][right_bound])
@@ -443,7 +444,7 @@ class node:
                     
                     # if there is a layer that can be bid on, bid on it    
                     if target_layer is not None:     
-                        bid = self.utility_function(self.updated_bw, self.updated_cpu - cpu_, self.updated_gpu - gpu_)
+                        bid = self.utility_function(self.updated_bw, self.updated_cpu - cpu_, self.updated_gpu - gpu_, self.item["NN_data_size"][target_layer], self.item["NN_cpu"][target_layer], self.item["NN_gpu"][target_layer])
                         bid -= self.id * 0.000000001
                             
                         # if my bid is higher than the current bid, I can bid on the layer
@@ -474,7 +475,7 @@ class node:
                                 found = True
                                 
                             if found:
-                                bid = self.utility_function(self.updated_bw, self.updated_cpu - cpu_, self.updated_gpu - gpu_)
+                                bid = self.utility_function(self.updated_bw, self.updated_cpu - cpu_, self.updated_gpu - gpu_, self.item["NN_data_size"][target_layer], self.item["NN_cpu"][target_layer], self.item["NN_gpu"][target_layer])
                                 bid -= self.id * 0.000000001
                                 
                                 # if my bid is higher than the current bid, I can bid on the layer
@@ -1323,6 +1324,8 @@ class node:
         while True:
             try: 
                 self.item = self.q[self.id].get(timeout=timeout)
+                # if "auction_id" in self.item:
+                #     print(self.item["auction_id"])
                                
                 with self.last_bid_timestamp_lock:
                     self.empty_queue[self.id].clear() 

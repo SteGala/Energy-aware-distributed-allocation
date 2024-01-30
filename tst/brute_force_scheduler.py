@@ -44,8 +44,6 @@ class BruteForceScheduler:
         else:
             df.to_csv(self.filename + ".csv", mode='a', header=True, index=False)
             
-        
-            
     def run(self):
         time_instant = 1
         running_jobs = []
@@ -66,20 +64,27 @@ class BruteForceScheduler:
                 
             self.save_node_state()
             time_instant += 1
+            
+        while len(running_jobs) > 0:
+            self.deallocate(time_instant, running_jobs)
+            self.save_node_state()
+            time_instant += 1
         
         self.save_node_state()
 
     def deallocate(self, time_instant, running_jobs):
-        ids = []
-        for id, j in enumerate(running_jobs):
-            if j["duration"] + j["exec_time"] < time_instant:
-                for i in range(len(j["cpu_per_node"])):
-                    self.compute_nodes[i].deallocate(j["cpu_per_node"][i], j["gpu_per_node"][i], 0)
-                ids.append(id)
-                #print(f"Deallocated job {j['job_id']}")
-            
-        for id in ids:
-            del running_jobs[id]
+        end = False
+        
+        while not end:
+            end = True
+            for id, j in enumerate(running_jobs):
+                if j["duration"] + j["exec_time"] < time_instant:
+                    for i in range(len(j["cpu_per_node"])):
+                        self.compute_nodes[i].deallocate(j["cpu_per_node"][i], j["gpu_per_node"][i], 0)
+                    print(f"Deallocated job {j['job_id']}")
+                    del running_jobs[id]
+                    end = False
+                    break
 
     def allocate(self, job, running_jobs, time_instant):                
         data = message_data(

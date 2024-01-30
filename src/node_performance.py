@@ -1,13 +1,15 @@
 import random
 import math
+from src.config import NodeType
 
 class NodePerformance:
-    def __init__(self, num_cpu_cores, num_gpu_compute_units, seed=0):
+    def __init__(self, num_cpu_cores, num_gpu_compute_units, node_type, seed=0):
         self.cpu_power_model = None
         self.gpu_power_model = None
         self.cpu_performance_model = None
         self.gpu_performance_model = None
-        
+        self.node_type = node_type
+                
         self.cpu_core_logical = round(num_cpu_cores)
         self.cpu_core_physical = round(num_cpu_cores/2)
         self.gpu_core = round(num_gpu_compute_units)
@@ -28,10 +30,19 @@ class NodePerformance:
 
     def set_default_power_and_performance_models(self):
         # Set default power and performance models
-        self.cpu_power_model = self.simple_cpu_power_model
-        self.gpu_power_model = self.simple_gpu_power_model
-        self.cpu_performance_model = self.simple_cpu_performance_model
-        self.gpu_performance_model = self.simple_gpu_performance_model
+        if self.node_type == NodeType.SERVER:
+            self.a = random.randint(3, 5)
+            self.b = random.randint(150, 180)
+            self.c = random.uniform(0.5, 2)
+        elif self.node_type == NodeType.DESKTOP:
+            self.a = random.randint(12, 18)
+            self.b = random.randint(12, 18)
+            self.c = random.uniform(0.5, 1.5)
+        
+        self.cpu_power_model = self.default_cpu_power_model
+        self.gpu_power_model = self.default_gpu_power_model
+        self.cpu_performance_model = self.default_cpu_performance_model
+        self.gpu_performance_model = self.default_gpu_performance_model
 
     def compute_current_power_consumption_cpu(self, cpu_usage):
         return self.cpu_power_model(cpu_usage)
@@ -59,23 +70,40 @@ class NodePerformance:
     
     # Default power consumption and performance models for CPUs based on usage
     # see https://www.desmos.com/calculator/yuwhv9aqjm?lang=it
-    def simple_cpu_power_model(self, usage):
+    def server_cpu_power_model(self, usage):
         if usage <= self.cpu_core_physical:
             return 2 * usage + self.idle_cpu_consumption
         else:
             return ((self.max_cpu_consumption - self.cpu_core_logical - self.idle_cpu_consumption)/(self.cpu_core_physical)) * (usage - self.cpu_core_logical) + self.max_cpu_consumption        
 
-    def simple_cpu_performance_model(self, usage):
+    def default_cpu_power_model(self, usage):
+        if usage <= self.cpu_core_physical:
+            return self.a * usage + self.b
+        else:
+            return self.c * usage + (self.a * self.cpu_core_physical + self.b - self.c * self.cpu_core_physical)
+    
+    def server_cpu_performance_model(self, usage):
         if usage <= self.cpu_core_physical:
             return 7 * usage + self.idle_cpu_performance
         else:
             return ((self.max_cpu_performance - 7 * self.cpu_core_physical - self.idle_cpu_performance)/(self.cpu_core_physical)) * (usage - self.cpu_core_logical) + self.max_cpu_performance        
     
-    def simple_gpu_power_model(self, usage):
+    def default_cpu_performance_model(self, usage):
+        return 1
+    
+    def server_gpu_power_model(self, usage):
+        return 0
         return 50 * math.log(usage + 5) +self.idle_gpu_consumption  # Example power model for GPU
+    
+    def default_gpu_power_model(self, usage):
+        return 0
+        return 50 * math.log(usage + 5) +self.idle_gpu_consumption
 
-    def simple_gpu_performance_model(self, usage):
+    def server_gpu_performance_model(self, usage):
         return 2 * math.log(usage + 1)  # Example performance model for GPU
+    
+    def default_gpu_performance_model(self, usage):
+        return 1
         
 
 if __name__ == "__main__":        

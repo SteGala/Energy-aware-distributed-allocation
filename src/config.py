@@ -24,11 +24,9 @@ class SchedulingAlgorithm(Enum):
 # the idea is to represent the types of GPU in ascending order of performance
 # i.e., NVIDIA > AMD > INTEL so when we receive the request for an AMD GPU
 # it can be executed on an NVIDIA and AMD GPU but not on an INTEL GPU
-class GPUType(Enum):
-    T4 = 1
-    P100 = 2
-    V100 = 3
-    MISC = 4
+class NodeType(Enum):
+    DESKTOP = 1
+    SERVER = 2
     #V100M32 = 4 sarebbe 4 e misc 5
     
 class ApplicationGraphType(Enum):
@@ -37,10 +35,10 @@ class ApplicationGraphType(Enum):
     GRAPH40 = 3
     GRAPH60 = 4
     
-class GPUSupport:
+class NodeSupport:
     
     @staticmethod
-    def get_gpu_type(gpu_type):
+    def get_node_type(gpu_type):
         """
         Returns the GPUType enum corresponding to the string `gpu_type`.
 
@@ -50,16 +48,14 @@ class GPUSupport:
         Returns:
             GPUType: The GPUType enum corresponding to `gpu_type`.
         """
-        if gpu_type == "T4":
-            return GPUType.T4
-        elif gpu_type == "P100":
-            return GPUType.P100
-        elif gpu_type == "V100":
-            return GPUType.V100
+        if gpu_type == "SERVER":
+            return NodeType.SERVER
+        elif gpu_type == "DESKTOP":
+            return NodeType.DESKTOP
         # elif gpu_type == "V100M32":
         #     return GPUType.V100M32
         else:
-            return GPUType.MISC
+            return NodeType.MISC
     
     
     @staticmethod
@@ -82,10 +78,6 @@ class GPUSupport:
         #         return False
         # return True
     
-        
-        
-
-    
     @staticmethod
     def get_compute_resources(gpu_type):
         """
@@ -97,19 +89,14 @@ class GPUSupport:
         Returns:
             Tuple[int, int]: A tuple containing the number of CPUs and GPUs available.
         """
-        cpu = [96, 96, 64, 96]
-        gpu = [2, 8, 2, 8]
+        cpu = [8, 112]
+        gpu = [0, 0]
 
-        if gpu_type == GPUType.T4:
+        if gpu_type == NodeType.DESKTOP:
             return cpu[0], gpu[0]
-        elif gpu_type == GPUType.P100:
-            return cpu[2], gpu[2]
-        elif gpu_type == GPUType.V100:
-            return cpu[3], gpu[3]
-        # elif gpu_type == GPUType.V100M32:
-        #     return cpu[4], gpu[4]
-        else: #MISC
+        elif gpu_type == NodeType.SERVER:
             return cpu[1], gpu[1]
+
         
     @staticmethod
     def get_GPU_corrective_factor(gpu_type1, gpu_type2, decrement=0.15):

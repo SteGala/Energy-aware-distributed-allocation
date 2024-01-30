@@ -13,14 +13,11 @@ from src.config import *
 import math
 
 def generate_gpu_types(n_nodes):
-    occurrencies = [0.3, 0.17, 0.47, 0.06]
-    GPU_types = ["T4", "MISC", "P100", "V100"]
-    np.random.seed(1)
+    GPU_types = ["DESKTOP", "SERVER"]
     
     gpu_types = []
-    for _ in range(n_nodes):
-        t_id = np.random.choice(np.arange(0, 4), p=occurrencies)
-        gpu_types.append(GPUSupport.get_gpu_type(GPU_types[t_id]))
+    for i in range(n_nodes):
+        gpu_types.append(NodeSupport.get_node_type(GPU_types[i%len(GPU_types)]))
         
     return gpu_types
     

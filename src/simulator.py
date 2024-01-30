@@ -11,7 +11,7 @@ import sys
 from src.network_topology import NetworkTopology
 from src.topology import topo as LogicalTopology
 from src.network_topology import  TopologyType
-from src.utils import generate_gpu_types, GPUSupport
+from src.utils import generate_gpu_types, NodeSupport
 from src.node import node
 from src.config import Utility, DebugLevel, SchedulingAlgorithm, ApplicationGraphType
 import src.jobs_handler as job
@@ -61,27 +61,29 @@ class Simulator_Plebiscito:
         self.decrement_factor = decrement_factor
         self.split = split
         self.app_type = app_type
+        self.utility = utility
         
         self.job_count = {}
-        
-        # create a suitable network topology for multiprocessing 
-        MyManager.register('NetworkTopology', NetworkTopology)
-        self.manager = MyManager()
-        self.manager.start()
-        
-        #Build Topolgy
-        self.t = LogicalTopology(func_name='ring_graph', max_bandwidth=node_bw, min_bandwidth=node_bw/2,num_clients=n_client, num_edges=n_nodes)
-        self.network_t = self.manager.NetworkTopology(n_nodes, node_bw, node_bw, group_number=4, seed=4, topology_type=TopologyType.FAT_TREE)
         
         self.nodes = []
         self.gpu_types = generate_gpu_types(n_nodes)
 
-        for i in range(n_nodes):
-            self.nodes.append(node(i, self.network_t, self.gpu_types[i], utility, alpha, enable_logging, self.t, n_nodes, progress_flag, use_net_topology=use_net_topology, decrement_factor=decrement_factor))
-            
         # Set up the environment
         self.setup_environment()
         
+    def startup_nodes(self):
+         # create a suitable network topology for multiprocessing 
+        MyManager.register('NetworkTopology', NetworkTopology)
+        self.manager = MyManager()
+        self.manager.start()
+        
+         #Build Topolgy
+        self.t = LogicalTopology(func_name='ring_graph', max_bandwidth=self.node_bw, min_bandwidth=self.node_bw/2,num_clients=self.n_client, num_edges=self.n_nodes)
+        self.network_t = self.manager.NetworkTopology(self.n_nodes, self.node_bw, self.node_bw, group_number=4, seed=4, topology_type=TopologyType.FAT_TREE)
+        
+        for i in range(self.n_nodes):
+            self.nodes.append(node(i, self.network_t, self.gpu_types[i], self.utility, self.alpha, self.enable_logging, self.t, self.n_nodes, self.progress_flag, use_net_topology=self.use_net_topology, decrement_factor=self.decrement_factor))
+            
     def get_nodes(self):
         return self.nodes
             
@@ -221,12 +223,12 @@ class Simulator_Plebiscito:
         print()
         NODES_PER_LINE = 4
         count = 0
-        print("Node GPU resource usage")
+        print("Node CPU resource usage")
         for n in self.nodes:
             if count == NODES_PER_LINE:
                 count = 0
                 print()
-            print("Node{0} ({1}):\t{2:3.0f}%\t".format(n.id, n.gpu_type,(n.initial_gpu - n.updated_gpu)/n.initial_gpu*100), end=" |   ")
+            print("Node{0} ({1}):\t{2:3.0f}%\t".format(n.id, n.gpu_type,(n.initial_cpu - n.updated_cpu)/n.initial_cpu*100), end=" |   ")
             count += 1
             #print(f"Node{n.id} ({n.gpu_type}):\t{(n.initial_gpu - n.updated_gpu)/n.initial_gpu*100}%   ", end=" | ")
         print()
@@ -290,7 +292,7 @@ class Simulator_Plebiscito:
                     # dispatch.append(row)
             else:
                 for node in self.nodes:           
-                    if GPUSupport.can_host(GPUSupport.get_gpu_type(node.gpu_type), GPUSupport.get_gpu_type(row["gpu_type"])) and node.get_avail_cpu() >= num_cpu and node.get_avail_gpu() >= num_gpu:
+                    if NodeSupport.can_host(NodeSupport.get_node_type(node.gpu_type), NodeSupport.get_node_type(row["gpu_type"])) and node.get_avail_cpu() >= num_cpu and node.get_avail_gpu() >= num_gpu:
                         # Append the row from jobs DataFrame
                         return False
                         # dispatch.append(row)
@@ -410,7 +412,7 @@ class Simulator_Plebiscito:
             #     batch_size += 1
 
             # Check if all jobs have been processed
-            if len(processed_jobs) == len(self.dataset):# and len(running_jobs) == 0 and len(jobs) == 0: # add to include also the final deallocation
+            if len(processed_jobs) == len(self.dataset) and len(running_jobs) == 0 and len(jobs) == 0: # add to include also the final deallocation
                 break
         
         # Collect final node results

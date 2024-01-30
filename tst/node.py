@@ -19,6 +19,6 @@ class Node:
         self.used_bw -= bw
         
     def can_host_job(self, cpu, gpu):
-        if (self.used_cpu + cpu <= self.initial_cpu) and (self.used_gpu + gpu <= self.initial_gpu):
+        if (self.used_cpu + cpu <= self.initial_cpu):# and (self.used_gpu + gpu <= self.initial_gpu):
             return True
         return False

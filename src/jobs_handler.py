@@ -115,7 +115,6 @@ def message_data(job_id, user, num_gpu, num_cpu, duration, bandwidth, gpu_type, 
         min_layer_bid = layer_number
 
     bundle_size = 2
-    #print(f"{job_id} - {NN_data_size}")
     
     data = {
         "job_id": int(),
