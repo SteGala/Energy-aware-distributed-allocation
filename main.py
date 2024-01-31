@@ -8,7 +8,7 @@ from plot import plot_consumption
 import sys
 
 if __name__ == '__main__':
-    n_jobs = 1000
+    n_jobs = 500
     dataset = generate_dataset(entries_num=n_jobs)
     
     simulator_0 = Simulator_Plebiscito(filename="0",
