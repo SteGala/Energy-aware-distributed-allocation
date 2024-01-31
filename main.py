@@ -3,6 +3,7 @@ from src.simulator import Simulator_Plebiscito
 from src.config import Utility, DebugLevel, SchedulingAlgorithm, ApplicationGraphType
 from src.dataset_builder import generate_dataset
 from tst.brute_force_scheduler import BruteForceScheduler
+from tst.kubernetes_scheduler import KubernetesScheduler
 from plot import plot_consumption
 import sys
 
@@ -10,8 +11,8 @@ if __name__ == '__main__':
     n_jobs = 30
     dataset = generate_dataset(entries_num=n_jobs)
     
-    simulator_lgf = Simulator_Plebiscito(filename="1",
-                        n_nodes=10,
+    simulator_0 = Simulator_Plebiscito(filename="0",
+                        n_nodes=15,
                         node_bw=1000000000,
                         n_jobs=n_jobs,
                         n_client=3,
@@ -20,25 +21,37 @@ if __name__ == '__main__':
                         progress_flag=False,
                         dataset=dataset,
                         alpha=1,
-                        utility=Utility.LGF,
+                        utility=Utility.POWER,
                         debug_level=DebugLevel.INFO,
                         scheduling_algorithm=SchedulingAlgorithm.FIFO,
                         decrement_factor=0,
                         split=True,
                         app_type=ApplicationGraphType.LINEAR,)
     
-    simulator_power = copy.deepcopy(simulator_lgf)
-    simulator_power.filename = "2"
-    simulator_power.utility = Utility.POWER
+    simulator_2 = copy.deepcopy(simulator_0)
+    simulator_2.filename = "2_" + "_".join(simulator_0.filename.split("_")[1:])
+    
+    simulator_4 = copy.deepcopy(simulator_0)
+    simulator_4.filename = "4_" + "_".join(simulator_0.filename.split("_")[1:])
 
-    simulator_lgf.startup_nodes()
-    simulator_lgf.run()
-    simulator_power.startup_nodes()
-    simulator_power.run()
+    simulator_0.set_outlier_number(0)
+    simulator_0.startup_nodes()
+    simulator_0.run()
     
-    nodes = simulator_lgf.get_nodes()
+    simulator_2.set_outlier_number(2)
+    simulator_2.startup_nodes()
+    simulator_2.run()
     
-    simulator_brute_force = BruteForceScheduler(nodes, dataset, "prova2", ApplicationGraphType.LINEAR, True)
+    simulator_4.set_outlier_number(4)
+    simulator_4.startup_nodes()
+    simulator_4.run()
     
+    nodes = simulator_0.get_nodes()
+    plot_consumption(nodes)
+    
+    simulator_kubernetes = KubernetesScheduler(nodes, dataset, "kubernetes", ApplicationGraphType.LINEAR, True)
+    simulator_kubernetes.run()
+    
+    simulator_brute_force = BruteForceScheduler(nodes, dataset, "brute-force", ApplicationGraphType.LINEAR, True)
     simulator_brute_force.run()
     
