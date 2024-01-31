@@ -107,7 +107,8 @@ def _add_job(job_list, job_dict, describe_dict=None):
         
     job_dict['gpu_type'] = 'SERVER'
     
-    job_list.append(job_dict)
+    if job_dict['num_cpu'] <20:
+        job_list.append(job_dict)
     
 # function from Alibaba's trace
 def add_job(csv_file, describe_dict, limit=None):
@@ -130,7 +131,7 @@ def init_go(num_jobs=100):
     arrivals = 1
     job_list = add_job(dataset, None, limit=num_jobs)
     if (num_jobs is not None) and num_jobs <= len(job_list):
-        #random.shuffle(job_list)
+        random.shuffle(job_list)
 
         job_list = job_list[:num_jobs]
     job_list = set_job_list_arrival_time(job_list, arrivals)

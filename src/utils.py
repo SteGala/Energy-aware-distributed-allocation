@@ -13,7 +13,8 @@ from src.config import *
 import math
 
 def generate_gpu_types(n_nodes):
-    GPU_types = ["DESKTOP", "SERVER"]
+    GPU_types = ["DESKTOP", "SERVER", "RASPBERRY"]
+    #GPU_types = ["DESKTOP", "SERVER"]
     
     gpu_types = []
     for i in range(n_nodes):
@@ -21,9 +22,7 @@ def generate_gpu_types(n_nodes):
         
     return gpu_types
     
-
 def wrong_bids_calc(nodes, job, num_edges, use_net_topology):
-    
     j = job['job_id']
     #print('\n[WRONG BID]' + str(j))
     wrong_bids=[] # used to not replicate same action over different nodes
@@ -37,7 +36,6 @@ def wrong_bids_calc(nodes, job, num_edges, use_net_topology):
                     break
             if not equal_values:
                 pass
-
 
     for curr_node in range(0, num_edges):
         if nodes[curr_node].bids[j]['auction_id'] not in wrong_bids:

@@ -1,5 +1,6 @@
 from enum import Enum
 import logging
+import random
 
 class Utility(Enum):
     LGF = 1
@@ -10,6 +11,7 @@ class Utility(Enum):
     POWER = 6
     SGF = 7
     UTIL = 8
+    RANDOM = 9
     
 class DebugLevel(Enum):
     TRACE = 5
@@ -27,6 +29,7 @@ class SchedulingAlgorithm(Enum):
 class NodeType(Enum):
     DESKTOP = 1
     SERVER = 2
+    RASPBERRY = 3
     #V100M32 = 4 sarebbe 4 e misc 5
     
 class ApplicationGraphType(Enum):
@@ -52,8 +55,8 @@ class NodeSupport:
             return NodeType.SERVER
         elif gpu_type == "DESKTOP":
             return NodeType.DESKTOP
-        # elif gpu_type == "V100M32":
-        #     return GPUType.V100M32
+        elif gpu_type == "RASPBERRY":
+            return NodeType.RASPBERRY
         else:
             return NodeType.MISC
     
@@ -89,13 +92,15 @@ class NodeSupport:
         Returns:
             Tuple[int, int]: A tuple containing the number of CPUs and GPUs available.
         """
-        cpu = [8, 112]
-        gpu = [0, 0]
+        cpu = [8, 28, 4]
+        gpu = [0, 0 , 0]
 
         if gpu_type == NodeType.DESKTOP:
-            return cpu[0], gpu[0]
+            return cpu[0]+random.choice([-2, -1, 0, 1, 2]), gpu[0]
         elif gpu_type == NodeType.SERVER:
-            return cpu[1], gpu[1]
+            return cpu[1]+random.choice([-4, -3, -2, -1, 0, 1, 2, 3, 4]), gpu[1]
+        elif gpu_type == NodeType.RASPBERRY:
+            return cpu[2], gpu[2]
 
         
     @staticmethod

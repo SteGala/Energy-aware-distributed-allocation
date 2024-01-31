@@ -1,6 +1,7 @@
 import math
 from multiprocessing.managers import SyncManager
 from multiprocessing import Process, Event, Manager, JoinableQueue
+import random
 import time
 import pandas as pd
 import signal
@@ -62,6 +63,7 @@ class Simulator_Plebiscito:
         self.split = split
         self.app_type = app_type
         self.utility = utility
+        self.outlier_number = 0
         
         self.job_count = {}
         
@@ -81,9 +83,16 @@ class Simulator_Plebiscito:
         self.t = LogicalTopology(func_name='ring_graph', max_bandwidth=self.node_bw, min_bandwidth=self.node_bw/2,num_clients=self.n_client, num_edges=self.n_nodes)
         self.network_t = self.manager.NetworkTopology(self.n_nodes, self.node_bw, self.node_bw, group_number=4, seed=4, topology_type=TopologyType.FAT_TREE)
         
+        outlier_nodes = random.choices([i for i in range(self.n_nodes)], k=self.outlier_number)
         for i in range(self.n_nodes):
-            self.nodes.append(node(i, self.network_t, self.gpu_types[i], self.utility, self.alpha, self.enable_logging, self.t, self.n_nodes, self.progress_flag, use_net_topology=self.use_net_topology, decrement_factor=self.decrement_factor))
+            if i in outlier_nodes:
+                self.nodes.append(node(i, self.network_t, self.gpu_types[i], Utility.RANDOM, self.alpha, self.enable_logging, self.t, self.n_nodes, self.progress_flag, use_net_topology=self.use_net_topology, decrement_factor=self.decrement_factor))
+            else:
+                self.nodes.append(node(i, self.network_t, self.gpu_types[i], self.utility, self.alpha, self.enable_logging, self.t, self.n_nodes, self.progress_flag, use_net_topology=self.use_net_topology, decrement_factor=self.decrement_factor))
             
+    def set_outlier_number(self, outlier_number):
+        self.outlier_number = outlier_number
+        
     def get_nodes(self):
         return self.nodes
             

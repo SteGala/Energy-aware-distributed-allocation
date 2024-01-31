@@ -3,6 +3,7 @@ This module impelments the behavior of a node
 '''
 
 from queue import Empty
+import random
 import time
 from src.config import Utility, NodeType, NodeSupport
 from src.network_topology import NetworkTopology
@@ -91,6 +92,7 @@ class node:
 
     def get_avail_gpu(self):
         return self.updated_gpu
+    
     def get_avail_cpu(self):
         return self.updated_cpu
         
@@ -222,6 +224,8 @@ class node:
             p_before = self.performance.compute_current_power_consumption_cpu(self.initial_cpu - avail_cpu)
             p_after = self.performance.compute_current_power_consumption_cpu(self.initial_cpu - (avail_cpu - cpu_job))
             return 1/(p_after - p_before)
+        elif self.utility == Utility.RANDOM:
+            return random.random()
 
 
     def forward_to_neighbohors(self, custom_dict=None, resend_bid=False):
@@ -331,185 +335,39 @@ class node:
     
     # NOTE: inprove in future iterations
     def compute_layer_score(self, cpu, gpu, bw):
-        return gpu
-
-    def bid_new(self, enable_forward=True):  
-        job_GPU_type = NodeSupport.get_node_type(self.item['gpu_type'])
-        #print(self.layer_bid_already)
-        # compute the requirements in CPU for the job
-        
-        # check if node GPU is capable of hosting the job
-        # check if the node has enough resources to host the job, we assume that a node can bet only in if it has enough resources to host the entire job
-        if not NodeSupport.can_host(self.gpu_type, job_GPU_type):# \
-            #or (self.item['job_id'] in self.layer_bid_already and True not in self.layer_bid_already[self.item['job_id']]):
-            self.forward_to_neighbohors()
-            return False
-              
+        return cpu
+    
+    def bid_energy(self, enable_forward=True):
         tmp_bid = copy.deepcopy(self.bids[self.item['job_id']])
         bidtime = datetime.now()
         
-        # create an array containing the indices of the layers that can be bid on
         possible_layer = []
+        layer_acquired = 0
+        gpu_ = 0
+        cpu_ = 0
         
-        # if I don't own any other layer, I can bid
-        if self.id not in self.bids[self.item['job_id']]['auction_id']:
-            for i in range(len(self.layer_bid_already[self.item['job_id']])):
-                # include only those layers that have not been bid on yet and that can be executed on the node (i.e., the node has enough resources)
-                if not self.layer_bid_already[self.item['job_id']][i] \
-                    and self.item['NN_cpu'][i] <= self.updated_cpu:# \
-                        #self.item['NN_cpu'][i] <= self.updated_cpu:# and self.item['NN_data_size'][i] <= self.updated_bw:
-                    possible_layer.append(i)
-        else:
-            # if I already own at least one layer, I'm not allowed to bet anymore
-            # otherwise I break the property of monotonicity
-            return False
-                        
-        # if there are no layers that can be bid on, return
-        # as the iteration goes on, the number of possible layers decreases (i.e., remove the ufeasible layers)
-        while len(possible_layer) > 0:
-            best_placement = None
-            best_score = None
-            
-            # iterate on the identify the preferable layer to bid on
+        for i in range(len(self.layer_bid_already[self.item['job_id']])):
+            # include only those layers that have not been bid on yet and that can be executed on the node (i.e., the node has enough resources)
+            if not self.layer_bid_already[self.item['job_id']][i] \
+                and self.item['NN_cpu'][i] <= self.updated_cpu:# \
+                    #self.item['NN_cpu'][i] <= self.updated_cpu:# and self.item['NN_data_size'][i] <= self.updated_bw:
+                possible_layer.append(i)
+        
+        while True:
+            min_req = float('inf')
+            target_layer = None
             for l in possible_layer:
-                score = self.compute_layer_score(self.item["NN_cpu"][l], self.item["NN_gpu"][l], self.item["NN_data_size"][l])
-                if best_score == None or score > best_score:
-                    best_score = score
-                    best_placement = l
-            
-            # compute the bid for the current layer, and remove it from the list of possible layers (no matter if the bid is valid or not)
-            bid = self.utility_function(self.updated_bw, self.updated_cpu, self.updated_gpu, self.item["NN_data_size"][best_placement], self.item["NN_cpu"][best_placement], self.item["NN_gpu"][best_placement])
-            bid -= self.id * 0.000000001
-            self.layer_bid_already[self.item['job_id']][best_placement] = True    
-            possible_layer.remove(best_placement)       
-
-            # if my bid is higher than the current bid, I can bid on the layer
-            if bid > tmp_bid['bid'][best_placement]:
-                                
-                gpu_ = self.item['NN_gpu'][best_placement]
-                cpu_ = self.item['NN_cpu'][best_placement]
-                #bw_ = self.item["NN_data_size"][best_placement]
-                
-                n_layer = 1
-                layers = []
-                
-                tmp_bid['bid'][best_placement] = bid
-                tmp_bid['auction_id'][best_placement]=(self.id)
-                tmp_bid['timestamp'][best_placement] = bidtime
-                
-                left_bound = best_placement
-                right_bound = best_placement
-                
-                # the success is checked at the end of the while loop. If it is true, it means that the bid is valid
-                success = False 
-                                
-                while True:
-                    # if I already bid on the maximum number of layers, return with success
-                    if n_layer >= self.item["N_layer_max"]:
-                        success = True
-                        break
+                if self.item['NN_cpu'][l] < min_req:
+                    min_req = self.item['NN_cpu'][l]
+                    target_layer = l
                     
-                    left_bound = left_bound - 1                    
-                    right_bound = right_bound + 1
-                    
-                    left_score = None
-                    right_score = None
-                    
-                    if left_bound >= 0 and self.layer_bid_already[self.item['job_id']][left_bound] == False \
-                        and self.item['NN_cpu'][left_bound] <= self.updated_cpu - cpu_ :#\
-                            #and self.item['NN_cpu'][left_bound] <= self.updated_cpu - cpu_ :
-                        left_score = self.compute_layer_score(self.item["NN_cpu"][left_bound], self.item["NN_gpu"][left_bound], self.item["NN_data_size"][left_bound])
-                        
-                    if right_bound < len(self.item["NN_cpu"]) and self.layer_bid_already[self.item['job_id']][right_bound] == False \
-                        and self.item['NN_cpu'][right_bound] <= self.updated_cpu - cpu_:# \
-                            #and self.item['NN_cpu'][right_bound] <= self.updated_cpu - cpu_ \
-                                
-                        right_score = self.compute_layer_score(self.item["NN_cpu"][right_bound], self.item["NN_gpu"][right_bound], self.item["NN_data_size"][right_bound])
-                    
-                    target_layer = None
-                    
-                    # proceed on the leyer on the left  
-                    if (left_score is not None and right_score is None) or (left_score is not None and right_score is not None and left_score >= right_score):
-                        target_layer = left_bound
-                        
-                        # not betting on the right bound layer, so decrease
-                        right_bound -= 1
-                    
-                    # proceed on the layer on the right
-                    if (right_score is not None and left_score is None) or (left_score is not None and right_score is not None and left_score < right_score):
-                        target_layer = right_bound
-                         
-                        # not betting on the right bound layer, so decrease
-                        left_bound += 1
-                    
-                    # if there is a layer that can be bid on, bid on it    
-                    if target_layer is not None:     
-                        bid = self.utility_function(self.updated_bw, self.updated_cpu - cpu_, self.updated_gpu - gpu_, self.item["NN_data_size"][target_layer], self.item["NN_cpu"][target_layer], self.item["NN_gpu"][target_layer])
-                        bid -= self.id * 0.000000001
-                            
-                        # if my bid is higher than the current bid, I can bid on the layer
-                        if bid > tmp_bid['bid'][target_layer]:
-                            tmp_bid['bid'][target_layer] = bid
-                            tmp_bid['auction_id'][target_layer]=(self.id)
-                            tmp_bid['timestamp'][target_layer] = bidtime
-                        
-                            n_layer += 1
-                            layers.append(target_layer)
-                            
-                            cpu_ += self.item['NN_cpu'][target_layer]
-                            gpu_ += self.item['NN_gpu'][target_layer]
-                            #bw_ += self.item['NN_data_size'][target_layer]
-                            
-                            continue 
-                        else: # try also on the other side
-                            found = False
-                            
-                            # we tried on the left bound, let's try on the right one now
-                            if target_layer == left_bound and right_score is not None:
-                                target_layer = right_bound + 1
-                                found = True
-                                
-                            # we tried on the right bound, let's try on the left one now    
-                            if target_layer == right_bound and left_score is not None:
-                                target_layer = left_bound - 1
-                                found = True
-                                
-                            if found:
-                                bid = self.utility_function(self.updated_bw, self.updated_cpu - cpu_, self.updated_gpu - gpu_, self.item["NN_data_size"][target_layer], self.item["NN_cpu"][target_layer], self.item["NN_gpu"][target_layer])
-                                bid -= self.id * 0.000000001
-                                
-                                # if my bid is higher than the current bid, I can bid on the layer
-                                if bid > self.item['bid'][target_layer]:
-                                    tmp_bid['bid'][target_layer] = bid
-                                    tmp_bid['auction_id'][target_layer]=(self.id)
-                                    tmp_bid['timestamp'][target_layer] = bidtime
-                                
-                                    n_layer += 1
-                                    layers.append(target_layer)
-                                    
-                                    cpu_ += self.item['NN_cpu'][target_layer]
-                                    gpu_ += self.item['NN_gpu'][target_layer]
-                                    #bw_ += self.item['NN_data_size'][target_layer]
-                                    
-                                    continue
-                            else:
-                                if n_layer >= self.item["N_layer_min"] and n_layer <= self.item["N_layer_max"]:
-                                    success = True
-                                    break           
-                    else: 
-                        if n_layer >= self.item["N_layer_min"] and n_layer <= self.item["N_layer_max"]:
-                            success = True
-                            break
-
-                if success:
+            if target_layer is None:        
+                if layer_acquired >= self.item["N_layer_min"] and layer_acquired <= self.item["N_layer_max"]:
                     self.updated_cpu -= cpu_
                     self.updated_gpu -= gpu_
                     #self.updated_bw -= bw_
                     
                     self.bids[self.item['job_id']] = tmp_bid
-                    
-                    for l in layers:
-                        self.layer_bid_already[self.item['job_id']][l] = True
                     
                     if enable_forward:
                         self.forward_to_neighbohors()
@@ -517,11 +375,27 @@ class node:
                     return True
                 else:
                     return False
+            else:
+                if self.item['NN_cpu'][target_layer] <= self.updated_cpu - cpu_:
+                    bid = self.utility_function(self.updated_bw, self.updated_cpu, self.updated_gpu, self.item["NN_data_size"][target_layer], self.item["NN_cpu"][target_layer], self.item["NN_gpu"][target_layer])
+                    bid -= self.id * 0.000000001
+                    self.layer_bid_already[self.item['job_id']][target_layer] = True  
+                    possible_layer.remove(target_layer)   
                 
-        # if enable_forward:
-        #     self.forward_to_neighbohors()
-                                    
-        return False     
+                    if bid > tmp_bid['bid'][target_layer]:  
+                        gpu_ += self.item['NN_gpu'][target_layer]
+                        cpu_ += self.item['NN_cpu'][target_layer]
+                        #bw_ = self.item["NN_data_size"][best_placement]
+                        
+                        layer_acquired += 1
+                        
+                        tmp_bid['bid'][target_layer] = bid
+                        tmp_bid['auction_id'][target_layer]=(self.id)
+                        tmp_bid['timestamp'][target_layer] = bidtime
+                else:
+                    possible_layer = []
+                    
+                
     
     def update_bw(self, prev_bid, deallocate=False):
         bw = 0
@@ -1189,7 +1063,7 @@ class node:
                     
                     if float('-inf') in self.bids[self.item['job_id']]['auction_id']:
                         if self.id not in self.bids[self.item['job_id']]['auction_id']: 
-                            self.bid_new()
+                            self.bid_energy()
                         else:
                             self.forward_to_neighbohors()
                     else:
@@ -1206,7 +1080,7 @@ class node:
                 success = False
 
                 if not integrity_fail and self.id not in self.bids[self.item['job_id']]['auction_id']:
-                    success = self.bid_new()
+                    success = self.bid_energy()
                     
                 if not success and rebroadcast:
                     self.forward_to_neighbohors()
@@ -1380,7 +1254,7 @@ class node:
                             
                                 threading.Thread(target=self.progress_bid_rounds, args=(copy.deepcopy(self.item),)).start()
                                 
-                            self.bid_new(flag)
+                            self.bid_energy(flag)
 
                         if not flag:
                             if self.enable_logging:
@@ -1388,7 +1262,7 @@ class node:
                             # if not self.bids[self.item['job_id']]['complete'] and \
                             #    not self.bids[self.item['job_id']]['clock'] :
                             if self.id not in self.item['auction_id']:
-                                self.bid_new(False)
+                                self.bid_energy(False)
 
                             self.update_bid()
                             # else:
