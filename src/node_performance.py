@@ -30,14 +30,20 @@ class NodePerformance:
 
     def set_default_power_and_performance_models(self):
         # Set default power and performance models
+        # https://www.desmos.com/calculator/yuwhv9aqjm?lang=it
         if self.node_type == NodeType.SERVER:
-            self.a = random.randint(3, 5)
-            self.b = random.randint(150, 180)
-            self.c = random.uniform(0.5, 2)
+            self.a = random.uniform(2, 6)
+            self.b = random.uniform(150, 180)
+            self.c = random.uniform(0.5, 2.5)
+        # https://www.desmos.com/calculator/xkzchgnurv?lang=it
         elif self.node_type == NodeType.DESKTOP:
-            self.a = random.randint(12, 18)
-            self.b = random.randint(12, 18)
-            self.c = random.uniform(0.5, 1.5)
+            self.a = random.uniform(10, 20)
+            self.b = random.uniform(12, 18)
+            self.c = random.uniform(0.5, 2)
+        # https://www.desmos.com/calculator/o2urtnfm54?lang=it
+        elif self.node_type == NodeType.RASPBERRY:
+            self.a = random.uniform(0.5, 1)
+            self.b = random.uniform(2.5, 4.5)
         
         self.cpu_power_model = self.default_cpu_power_model
         self.gpu_power_model = self.default_gpu_power_model
@@ -68,15 +74,10 @@ class NodePerformance:
         
         return cpu_power + gpu_power
     
-    # Default power consumption and performance models for CPUs based on usage
-    # see https://www.desmos.com/calculator/yuwhv9aqjm?lang=it
-    def server_cpu_power_model(self, usage):
-        if usage <= self.cpu_core_physical:
-            return 2 * usage + self.idle_cpu_consumption
-        else:
-            return ((self.max_cpu_consumption - self.cpu_core_logical - self.idle_cpu_consumption)/(self.cpu_core_physical)) * (usage - self.cpu_core_logical) + self.max_cpu_consumption        
-
     def default_cpu_power_model(self, usage):
+        if self.node_type == NodeType.RASPBERRY:
+            return self.a * usage + self.b
+        
         if usage <= self.cpu_core_physical:
             return self.a * usage + self.b
         else:
