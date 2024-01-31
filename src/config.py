@@ -82,7 +82,7 @@ class NodeSupport:
         # return True
     
     @staticmethod
-    def get_compute_resources(gpu_type):
+    def get_compute_resources(gpu_type, seed=0):
         """
         Returns the number of CPUs and GPUs available for a given GPU type.
 
@@ -92,6 +92,7 @@ class NodeSupport:
         Returns:
             Tuple[int, int]: A tuple containing the number of CPUs and GPUs available.
         """
+        random.seed(seed)
         cpu = [8, 28, 4]
         gpu = [0, 0 , 0]
 

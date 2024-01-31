@@ -32,14 +32,14 @@ class NodePerformance:
         # Set default power and performance models
         # https://www.desmos.com/calculator/yuwhv9aqjm?lang=it
         if self.node_type == NodeType.SERVER:
-            self.a = random.uniform(2, 6)
+            self.a = random.uniform(1, 7)
             self.b = random.uniform(150, 180)
-            self.c = random.uniform(0.5, 2.5)
+            self.c = random.uniform(0.5, self.a)
         # https://www.desmos.com/calculator/xkzchgnurv?lang=it
         elif self.node_type == NodeType.DESKTOP:
             self.a = random.uniform(10, 20)
-            self.b = random.uniform(12, 18)
-            self.c = random.uniform(0.5, 2)
+            self.b = random.uniform(10, 20)
+            self.c = random.uniform(0.2, 6)
         # https://www.desmos.com/calculator/o2urtnfm54?lang=it
         elif self.node_type == NodeType.RASPBERRY:
             self.a = random.uniform(0.5, 1)

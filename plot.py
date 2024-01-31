@@ -2,12 +2,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
-    filenames = ["brute-force.csv", "0_POWER_FIFO_0_split.csv", "2_POWER_FIFO_0_split.csv", "4_POWER_FIFO_0_split.csv", "kubernetes.csv"]
+    filenames = ["brute-force.csv", "0_POWER_FIFO_0_split.csv", "2_POWER_FIFO_0_split.csv", "4_POWER_FIFO_0_split.csv", "6_POWER_FIFO_0_split.csv", "8_POWER_FIFO_0_split.csv", "kubernetes.csv"]
     labels = {
         "brute-force.csv": "Brute Force",
         "0_POWER_FIFO_0_split.csv": "Plebiscito-POWER-0",
         "2_POWER_FIFO_0_split.csv": "Plebiscito-POWER-2",
         "4_POWER_FIFO_0_split.csv": "Plebiscito-POWER-4",
+        "6_POWER_FIFO_0_split.csv": "Plebiscito-POWER-6",
+        "8_POWER_FIFO_0_split.csv": "Plebiscito-POWER-8",
         "kubernetes.csv": "Kubernetes"
     }
     data = {}
@@ -37,7 +39,7 @@ if __name__ == "__main__":
     df = pd.DataFrame(plot_data, columns=list(labels.values()))
     _ = df.boxplot(ax=ax2, rot=90)
     
-    ax1.legend()
+    #ax1.legend()
     ax1.set_xlabel("Time")
     ax1.set_ylabel("Power Consumption (W)")
     #fig.xlabel("Time")

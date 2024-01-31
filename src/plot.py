@@ -37,7 +37,7 @@ def plot_node_resource_usage_box(filename, res_type, n_nodes, dir_name):
     
     plt.ylabel(f"{res_type} usage")
     plt.xlabel("GPU type")
-    plt.savefig(os.path.join(dir_name, 'node_' + res_type + '_resource_usage_box.png'))
+    plt.savefig(os.path.join(filename, 'node_' + res_type + '_resource_usage_box.png'))
     # ticks = [i+1 for i in range(len(d.keys()))]
     # plt.xticks(ticks, d.keys())
     
@@ -72,7 +72,7 @@ def plot_node_resource_usage(filename, res_type, n_nodes, dir_name):
     
     plt.ylabel(f"{res_type} usage")
     plt.xlabel("time")
-    plt.savefig(os.path.join(dir_name, 'node_' + res_type + '_resource_usage.png'))
+    plt.savefig(os.path.join(filename, 'node_' + res_type + '_resource_usage.png'))
     
     # clear plot
     plt.clf()
@@ -99,7 +99,7 @@ def plot_job_execution_delay(filename, dir_name):
     # save the plot to a file
     plt.ylabel(f"Occurrences")
     plt.xlabel("Job execution delay (s)")
-    plt.savefig(os.path.join(dir_name, 'job_execution_delay.png'))
+    plt.savefig(os.path.join(filename, 'job_execution_delay.png'))
     
     # clear plot
     plt.clf()
@@ -131,7 +131,7 @@ def plot_job_deadline(filename, dir_name):
     plt.xlabel("Job deadline exceeded (s)")
     
     # save the plot to a file
-    plt.savefig(os.path.join(dir_name, 'job_deadline_exceeded.png'))
+    plt.savefig(os.path.join(filename, 'job_deadline_exceeded.png'))
     
     # clear plot
     plt.clf()
@@ -156,7 +156,7 @@ def plot_power_consumption(filename, res_type, n_nodes, dir_name):
     
     plt.ylabel(f"{res_type} consumption")
     plt.xlabel("time")
-    plt.savefig(os.path.join(dir_name, 'node_' + res_type + '_consumption.png'))
+    plt.savefig(os.path.join(filename, 'node_' + res_type + '_consumption.png'))
     
     # clear plot
     plt.clf()
@@ -197,7 +197,7 @@ def plot_all(n_edges, filename, job_count, dir_name):
         job_count (dict): Jobs in the system.
         dir_name (str): Name of the directory where the plots will be saved.
     """
-    generate_plot_folder(dir_name)
+    generate_plot_folder(filename)
     
     plot_node_resource_usage(filename, "gpu", n_edges, dir_name)
     plot_node_resource_usage(filename, "cpu", n_edges, dir_name)
@@ -213,7 +213,7 @@ def plot_all(n_edges, filename, job_count, dir_name):
     plot_job_execution_delay(filename, dir_name)
     plot_job_deadline(filename, dir_name)
     
-    plot_job_messages_exchanged(job_count, dir_name)
+    plot_job_messages_exchanged(job_count, filename)
     
 if __name__ == "__main__":
     

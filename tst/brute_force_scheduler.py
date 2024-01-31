@@ -125,7 +125,7 @@ class BruteForceScheduler:
             return
         
         print(f"Allocated job {job['job_id']}")
-        print(best_allocation)
+        #print(best_allocation)
         cpu_per_node, gpu_per_node = self.compute_requirement_per_node(best_allocation, data)
         for i in range(len(cpu_per_node)):
             self.compute_nodes[i].allocate(cpu_per_node[i], gpu_per_node[i], 0)

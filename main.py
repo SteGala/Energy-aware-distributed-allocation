@@ -8,7 +8,7 @@ from plot import plot_consumption
 import sys
 
 if __name__ == '__main__':
-    n_jobs = 30
+    n_jobs = 1000
     dataset = generate_dataset(entries_num=n_jobs)
     
     simulator_0 = Simulator_Plebiscito(filename="0",
@@ -33,6 +33,12 @@ if __name__ == '__main__':
     
     simulator_4 = copy.deepcopy(simulator_0)
     simulator_4.filename = "4_" + "_".join(simulator_0.filename.split("_")[1:])
+    
+    simulator_6 = copy.deepcopy(simulator_0)
+    simulator_6.filename = "6_" + "_".join(simulator_0.filename.split("_")[1:])
+    
+    simulator_8 = copy.deepcopy(simulator_0)
+    simulator_8.filename = "8_" + "_".join(simulator_0.filename.split("_")[1:])
 
     simulator_0.set_outlier_number(0)
     simulator_0.startup_nodes()
@@ -45,6 +51,14 @@ if __name__ == '__main__':
     simulator_4.set_outlier_number(4)
     simulator_4.startup_nodes()
     simulator_4.run()
+    
+    simulator_6.set_outlier_number(6)
+    simulator_6.startup_nodes()
+    simulator_6.run()
+    
+    simulator_8.set_outlier_number(8)
+    simulator_8.startup_nodes()
+    simulator_8.run()
     
     nodes = simulator_0.get_nodes()
     plot_consumption(nodes)

@@ -35,7 +35,7 @@ class node:
         self.progress_flag = progress_flag
         self.decrement_factor = decrement_factor
         
-        self.initial_cpu, self.initial_gpu = NodeSupport.get_compute_resources(gpu_type)
+        self.initial_cpu, self.initial_gpu = NodeSupport.get_compute_resources(gpu_type, self.id)
         self.updated_gpu = self.initial_gpu
         self.updated_cpu = self.initial_cpu
         self.performance = NodePerformance(self.initial_cpu, self.initial_gpu, gpu_type, self.id)
