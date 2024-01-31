@@ -10,8 +10,19 @@ allocation = None
 best_allocation = None
 best_power_consumption = None
 
-def check_valid_allocation(allocation, job):
-        return True
+def is_valid_allocation(allocation, job, n_nodes):
+    min_ = job["N_layer_min"]
+    max_ = job["N_layer_max"]
+    counter = [0 for i in range(n_nodes)]
+    
+    for id in allocation:
+        counter[id] += 1
+        
+    for c in allocation:
+        if counter[c] < min_ or counter[c] > max_:
+            return False
+
+    return True
 
 class BruteForceScheduler:
     def __init__(self, nodes, dataset, filename, application_graph_type, split):
@@ -114,7 +125,7 @@ class BruteForceScheduler:
             return
         
         print(f"Allocated job {job['job_id']}")
-        # print(best_allocation)
+        print(best_allocation)
         cpu_per_node, gpu_per_node = self.compute_requirement_per_node(best_allocation, data)
         for i in range(len(cpu_per_node)):
             self.compute_nodes[i].allocate(cpu_per_node[i], gpu_per_node[i], 0)
@@ -156,11 +167,12 @@ class BruteForceScheduler:
         
         if n == num_layers:
             # compute the power consumption of the current allocation
-            power_consumption = self.compute_power_consumption(allocation, job)
-            
-            if power_consumption < best_power_consumption:
-                best_power_consumption = power_consumption
-                best_allocation = copy.deepcopy(allocation)
+            if is_valid_allocation(allocation, job, len(self.compute_nodes)):
+                power_consumption = self.compute_power_consumption(allocation, job)
+                
+                if power_consumption < best_power_consumption:
+                    best_power_consumption = power_consumption
+                    best_allocation = copy.deepcopy(allocation)
                 
             return
         
